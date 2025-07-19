@@ -15,7 +15,7 @@ import { ResultsView } from './views/ResultsView';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 
 
-export default function App() {
+function App() {
     const [view, setView] = useState('home');
     const [userId, setUserId] = useState(null);
     const [isAuthReady, setIsAuthReady] = useState(false);
@@ -141,3 +141,5 @@ export default function App() {
         </div>
     );
 }
+
+export default App;
