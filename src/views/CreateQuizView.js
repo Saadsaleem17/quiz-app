@@ -71,7 +71,7 @@ export const CreateQuizView = ({ setView, userId, setCreatedQuizCode, setLocalQu
             }));
             
             // Save to permanent database
-            const saved = saveQuizToDatabase(userId, quizId, quizData);
+            const saved = await saveQuizToDatabase(userId, quizId, quizData);
             if (saved) {
                 console.log("Quiz saved to permanent database");
             } else {

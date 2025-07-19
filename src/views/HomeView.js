@@ -1,8 +1,8 @@
 import React from 'react';
-import { Plus, Play, Trash2, Library } from 'lucide-react';
+import { Plus, Play, Trash2, Library, LogOut } from 'lucide-react';
 import { deleteQuiz } from '../utils/quizDatabase';
 
-export const HomeView = ({ setView, myQuizzes, setCreatedQuizCode, userId, loadSavedQuizzes }) => {
+export const HomeView = ({ setView, myQuizzes, setCreatedQuizCode, userId, loadSavedQuizzes, username, onLogout }) => {
     
     const handleResumeQuiz = (quizId) => {
         setCreatedQuizCode(quizId);
@@ -32,6 +32,24 @@ export const HomeView = ({ setView, myQuizzes, setCreatedQuizCode, userId, loadS
 
     return (
         <div className="text-center">
+            {/* User info and logout */}
+            {username && (
+                <div className="flex justify-between items-center mb-6">
+                    <div className="text-left">
+                        <p className="text-gray-400">Welcome back,</p>
+                        <p className="text-xl font-semibold text-cyan-400">{username}</p>
+                    </div>
+                    {onLogout && (
+                        <button
+                            onClick={onLogout}
+                            className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm"
+                        >
+                            <LogOut size={16} /> Logout
+                        </button>
+                    )}
+                </div>
+            )}
+            
             <h1 className="text-5xl font-bold text-cyan-400 mb-4">QuizMaster</h1>
             <p className="text-lg text-gray-400 mb-12">Create, share, and play quizzes with your team in real-time.</p>
             <div className="flex flex-col md:flex-row gap-6 justify-center">

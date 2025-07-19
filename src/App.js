@@ -15,6 +15,7 @@ import { QuizLibrary } from './views/QuizLibrary';
 
 // Import Common Components
 import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { DemoAuth } from './components/auth/DemoAuth';
 
 // Import Database utilities
 import { getUserQuizzes, saveQuiz } from './utils/quizDatabase';
@@ -23,6 +24,7 @@ import { getUserQuizzes, saveQuiz } from './utils/quizDatabase';
 function App() {
     const [view, setView] = useState('home');
     const [userId, setUserId] = useState(null);
+    const [username, setUsername] = useState('');
     const [isAuthReady, setIsAuthReady] = useState(false);
     const [quizCode, setQuizCode] = useState('');
     const [createdQuizCode, setCreatedQuizCode] = useState(null);
@@ -40,14 +42,33 @@ function App() {
 
     // --- Authentication Effect ---
     useEffect(() => {
-        // For demo mode, we'll skip Firebase authentication and use a mock user ID
-        console.log("Setting up demo authentication");
-        const demoUserId = `demo-user-${Math.random().toString(36).substr(2, 9)}`;
-        setUserId(demoUserId);
-        setIsAuthReady(true);
+        const initializeApp = async () => {
+            console.log("Setting up demo authentication");
+            
+            // Check if user is already logged in
+            const currentUser = localStorage.getItem('quiz_app_current_user');
+            if (currentUser) {
+                try {
+                    const user = JSON.parse(currentUser);
+                    setUserId(user.id);
+                    setUsername(user.username);
+                    setPlayerName(user.username);
+                    setIsAuthReady(true);
+                    
+                    // Load saved quizzes from database
+                    await loadSavedQuizzes(user.id);
+                    console.log("Auto-logged in user:", user.username);
+                } catch (error) {
+                    console.error("Error parsing stored user:", error);
+                    localStorage.removeItem('quiz_app_current_user');
+                    setIsAuthReady(true);
+                }
+            } else {
+                setIsAuthReady(true);
+            }
+        };
         
-        // Load saved quizzes from database
-        loadSavedQuizzes(demoUserId);
+        initializeApp();
         
         // Commenting out Firebase auth for demo mode
         /*
@@ -70,19 +91,28 @@ function App() {
     }, []);
 
     // Load saved quizzes from database
-    const loadSavedQuizzes = (userId) => {
+    const loadSavedQuizzes = async (userId) => {
         if (userId) {
-            const quizzes = getUserQuizzes(userId);
-            setSavedQuizzes(quizzes);
-            setMyQuizzes(Object.values(quizzes));
+            console.log("Loading saved quizzes for user:", userId);
+            try {
+                const quizzes = await getUserQuizzes(userId);
+                console.log("Loaded quizzes:", quizzes);
+                setSavedQuizzes(quizzes || {});
+                setMyQuizzes(Object.values(quizzes || {}));
+                console.log("Set myQuizzes to:", Object.values(quizzes || {}));
+            } catch (error) {
+                console.error("Error loading saved quizzes:", error);
+                setSavedQuizzes({});
+                setMyQuizzes([]);
+            }
         }
     };
 
     // Save quiz to database
-    const saveQuizToDatabase = (userId, quizId, quizData) => {
-        const success = saveQuiz(userId, quizId, quizData);
+    const saveQuizToDatabase = async (userId, quizId, quizData) => {
+        const success = await saveQuiz(userId, quizId, quizData);
         if (success) {
-            loadSavedQuizzes(userId);
+            await loadSavedQuizzes(userId);
             console.log('Quiz saved to permanent database');
         }
         return success;
@@ -246,6 +276,12 @@ function App() {
         if (!isAuthReady) {
             return <LoadingSpinner />;
         }
+
+        // Show authentication screen if no user is logged in
+        if (!userId) {
+            return <DemoAuth onLogin={handleDemoLogin} />;
+        }
+        
         switch (view) {
             case 'create':
                 console.log("Rendering CreateQuizView");
@@ -305,8 +341,33 @@ function App() {
                     setCreatedQuizCode={setCreatedQuizCode} 
                     userId={userId} 
                     loadSavedQuizzes={loadSavedQuizzes}
+                    username={username}
+                    onLogout={handleLogout}
                 />;
         }
+    };
+
+    // Handle demo login
+    const handleDemoLogin = async (userId, username) => {
+        setUserId(userId);
+        setUsername(username);
+        setPlayerName(username);
+        
+        // Load saved quizzes from database
+        await loadSavedQuizzes(userId);
+        console.log("User logged in:", username);
+    };
+
+    // Handle logout
+    const handleLogout = () => {
+        localStorage.removeItem('quiz_app_current_user');
+        setUserId(null);
+        setUsername('');
+        setPlayerName('');
+        setSavedQuizzes({});
+        setMyQuizzes([]);
+        setView('home');
+        console.log("User logged out");
     };
 
     return (

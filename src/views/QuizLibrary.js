@@ -14,47 +14,82 @@ export const QuizLibrary = ({ setView, userId, setCreatedQuizCode, setQuizCode }
     }, [userId]);
 
     useEffect(() => {
-        if (searchTerm.trim()) {
-            const filtered = searchQuizzes(userId, searchTerm);
-            setFilteredQuizzes(filtered);
-        } else {
-            setFilteredQuizzes(savedQuizzes);
-        }
+        filterQuizzes();
     }, [searchTerm, savedQuizzes, userId]);
 
-    const loadQuizzes = () => {
-        const quizzes = getUserQuizzes(userId);
-        setSavedQuizzes(quizzes);
+    const loadQuizzes = async () => {
+        try {
+            const quizzes = await getUserQuizzes(userId);
+            setSavedQuizzes(quizzes || {});
+        } catch (error) {
+            console.error('Error loading quizzes:', error);
+            setSavedQuizzes({});
+        }
     };
 
-    const loadStats = () => {
-        const quizStats = getQuizStats(userId);
-        setStats(quizStats);
+    const loadStats = async () => {
+        try {
+            const quizStats = await getQuizStats(userId);
+            setStats(quizStats);
+        } catch (error) {
+            console.error('Error loading stats:', error);
+            setStats(null);
+        }
     };
 
-    const handleDeleteQuiz = (quizId) => {
-        if (window.confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
-            const success = deleteQuiz(userId, quizId);
-            if (success) {
-                loadQuizzes();
-                loadStats();
-                alert('Quiz deleted successfully!');
+    const filterQuizzes = async () => {
+        try {
+            if (searchTerm.trim()) {
+                const filtered = await searchQuizzes(userId, searchTerm);
+                setFilteredQuizzes(filtered || {});
             } else {
+                setFilteredQuizzes(savedQuizzes || {});
+            }
+        } catch (error) {
+            console.error('Error filtering quizzes:', error);
+            setFilteredQuizzes({});
+        }
+    };
+
+    const handleDeleteQuiz = async (quizId) => {
+        if (window.confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
+            try {
+                const success = await deleteQuiz(userId, quizId);
+                if (success) {
+                    await loadQuizzes();
+                    await loadStats();
+                    alert('Quiz deleted successfully!');
+                } else {
+                    alert('Failed to delete quiz. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error deleting quiz:', error);
                 alert('Failed to delete quiz. Please try again.');
             }
         }
     };
 
-    const handleStartQuiz = (quizId) => {
-        updateQuizUsage(userId, quizId);
-        setCreatedQuizCode(quizId);
-        setView('lobby');
+    const handleStartQuiz = async (quizId) => {
+        try {
+            await updateQuizUsage(userId, quizId);
+            setCreatedQuizCode(quizId);
+            setView('lobby');
+        } catch (error) {
+            console.error('Error starting quiz:', error);
+            setView('lobby');
+        }
     };
 
-    const handleJoinQuiz = (quizId) => {
-        updateQuizUsage(userId, quizId);
-        setQuizCode(quizId);
-        setView('quiz');
+    const handleJoinQuiz = async (quizId) => {
+        try {
+            await updateQuizUsage(userId, quizId);
+            setQuizCode(quizId);
+            setView('quiz');
+        } catch (error) {
+            console.error('Error joining quiz:', error);
+            setQuizCode(quizId);
+            setView('quiz');
+        }
     };
 
     const formatDate = (dateString) => {
