@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { db, appId } from '../firebase/config';
 import { doc, setDoc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
 
-export const QuizView = ({ quiz, userId, quizCode, currentQuestionIndex, selectedAnswer, setSelectedAnswer }) => {
+export const QuizView = ({ quiz, userId, quizCode, currentQuestionIndex, selectedAnswer, setSelectedAnswer, setCurrentQuiz, setView, setQuizResults, setCurrentQuestionIndex, setLocalQuizzes, localQuizzes, playerName, userAnswers, setUserAnswers }) => {
     const isHost = quiz?.createdBy === userId;
 
     useEffect(() => {
@@ -17,6 +17,18 @@ export const QuizView = ({ quiz, userId, quizCode, currentQuestionIndex, selecte
 
     const handleAnswerSubmit = async (optionIndex) => {
         setSelectedAnswer(optionIndex);
+        
+        // Store the user's answer for score calculation
+        setUserAnswers(prev => ({
+            ...prev,
+            [currentQuestionIndex]: optionIndex
+        }));
+        
+        // Handle demo mode - no Firebase operations
+        if (quizCode === 'DEMO' || quizCode === 'TEST') {
+            console.log("Demo mode: Answer submitted:", optionIndex);
+            return;
+        }
         
         const quizAnswersRef = collection(db, `/artifacts/${appId}/public/data/quizzes/${quizCode}/answers`);
         const answerDocId = `${userId}_q${currentQuestionIndex}`;
@@ -35,6 +47,50 @@ export const QuizView = ({ quiz, userId, quizCode, currentQuestionIndex, selecte
 
     const handleNextQuestion = async () => {
         const nextIndex = currentQuestionIndex + 1;
+        
+        // Handle demo mode and local quizzes
+        if (quizCode === 'DEMO' || quizCode === 'TEST' || (localQuizzes && localQuizzes[quizCode])) {
+            if (nextIndex < quiz.questions.length) {
+                // Update the quiz state locally for demo mode and local quizzes
+                const updatedQuiz = { ...quiz, currentQuestionIndex: nextIndex };
+                setCurrentQuiz(updatedQuiz);
+                setCurrentQuestionIndex(nextIndex);
+                setSelectedAnswer(null);
+                
+                // If it's a local quiz, update the stored data too
+                if (localQuizzes && localQuizzes[quizCode]) {
+                    setLocalQuizzes(prevQuizzes => ({
+                        ...prevQuizzes,
+                        [quizCode]: updatedQuiz
+                    }));
+                }
+                
+                console.log("Local/Demo mode: Moving to question", nextIndex + 1);
+            } else {
+                // Calculate real scores based on user answers
+                let userScore = 0;
+                quiz.questions.forEach((question, index) => {
+                    if (question.correctAnswer !== undefined && userAnswers[index] === question.correctAnswer) {
+                        userScore++;
+                    }
+                });
+                
+                const realResults = {
+                    scores: [
+                        { name: playerName || "You", score: userScore },
+                        { name: "Demo Player 1", score: Math.floor(Math.random() * quiz.questions.length) },
+                        { name: "Demo Player 2", score: Math.floor(Math.random() * quiz.questions.length) }
+                    ],
+                    totalQuestions: quiz.questions.length
+                };
+                realResults.scores.sort((a, b) => b.score - a.score);
+                setQuizResults(realResults);
+                setView('results');
+                console.log("Local/Demo mode: Quiz finished, showing results with real scores");
+            }
+            return;
+        }
+        
         if (nextIndex < quiz.questions.length) {
             await updateDoc(doc(db, `/artifacts/${appId}/public/data/quizzes/${quizCode}`), {
                 currentQuestionIndex: nextIndex

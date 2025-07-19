@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { db, appId } from '../firebase/config';
-import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
+// import { db, appId } from '../firebase/config';
+// import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
 import { Plus, ArrowLeft, Trash2 } from 'lucide-react';
 
-export const CreateQuizView = ({ setView, userId, setCreatedQuizCode }) => {
+export const CreateQuizView = ({ setView, userId, setCreatedQuizCode, setLocalQuizzes, saveQuizToDatabase }) => {
     const [title, setTitle] = useState('');
     const [questions, setQuestions] = useState([{ text: '', options: ['', '', '', ''], correctAnswer: 0 }]);
 
@@ -38,38 +38,55 @@ export const CreateQuizView = ({ setView, userId, setCreatedQuizCode }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        console.log("Form submitted with:", { title, questions });
+        
         if (!title.trim() || questions.some(q => !q.text.trim() || q.options.some(o => !o.trim()))) {
+            alert("Please fill out all fields including quiz title, questions, and all answer options.");
             console.log("Validation failed: Please fill out all fields.");
             return;
         }
 
         try {
-            const privateQuizCollectionPath = `/artifacts/${appId}/users/${userId}/quizzes`;
+            console.log("Attempting to create quiz...");
+            
+            // Generate a simple ID for demo purposes
+            const quizId = 'demo-' + Date.now();
+            console.log("Generated quiz ID:", quizId);
+            
+            // Create the quiz object
             const quizData = {
                 title,
                 questions,
                 createdBy: userId,
-                createdAt: new Date(),
-            };
-            const privateDocRef = await addDoc(collection(db, privateQuizCollectionPath), quizData);
-            const quizId = privateDocRef.id;
-
-            const publicQuizDocPath = `/artifacts/${appId}/public/data/quizzes/${quizId}`;
-            const publicQuizData = {
-                title,
-                questions: questions.map(q => ({ text: q.text, options: q.options })),
-                createdBy: userId,
                 status: 'lobby',
-                players: [],
+                players: [{ id: userId, name: 'Host' }],
                 currentQuestionIndex: 0,
-                answers: [],
+                createdAt: new Date().toISOString()
             };
-            await setDoc(doc(db, publicQuizDocPath), publicQuizData);
-
+            
+            // Store the quiz locally (for immediate use)
+            setLocalQuizzes(prevQuizzes => ({
+                ...prevQuizzes,
+                [quizId]: quizData
+            }));
+            
+            // Save to permanent database
+            const saved = saveQuizToDatabase(userId, quizId, quizData);
+            if (saved) {
+                console.log("Quiz saved to permanent database");
+            } else {
+                console.warn("Failed to save quiz to database, but proceeding with local storage");
+            }
+            
+            // For demo mode, we'll just set the quiz code and move to lobby
             setCreatedQuizCode(quizId);
+            console.log("Quiz created and stored locally:", quizId);
+            console.log("Set quiz code, navigating to lobby...");
             setView('lobby');
+            
         } catch (error) {
             console.error("Error creating quiz:", error);
+            alert("Error creating quiz. Check the console for details.");
         }
     };
 

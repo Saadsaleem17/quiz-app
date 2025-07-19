@@ -2,16 +2,18 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+// For development, we'll use a default configuration
+// In production, you would replace these with your actual Firebase config
+const firebaseConfig = {
+    apiKey: "demo-api-key",
+    authDomain: "demo-project.firebaseapp.com",
+    projectId: "demo-project",
+    storageBucket: "demo-project.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef123456"
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-quiz-app';
+export const appId = 'quiz-app-demo';

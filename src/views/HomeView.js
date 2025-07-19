@@ -1,9 +1,8 @@
 import React from 'react';
-import { db, appId } from '../firebase/config';
-import { doc, deleteDoc } from 'firebase/firestore';
-import { Plus, Play, Trash2 } from 'lucide-react';
+import { Plus, Play, Trash2, Library } from 'lucide-react';
+import { deleteQuiz } from '../utils/quizDatabase';
 
-export const HomeView = ({ setView, myQuizzes, setCreatedQuizCode, userId }) => {
+export const HomeView = ({ setView, myQuizzes, setCreatedQuizCode, userId, loadSavedQuizzes }) => {
     
     const handleResumeQuiz = (quizId) => {
         setCreatedQuizCode(quizId);
@@ -16,12 +15,16 @@ export const HomeView = ({ setView, myQuizzes, setCreatedQuizCode, userId }) => 
         }
         
         try {
-            const privateQuizDocPath = `/artifacts/${appId}/users/${userId}/quizzes/${quizId}`;
-            await deleteDoc(doc(db, privateQuizDocPath));
-
-            const publicQuizDocPath = `/artifacts/${appId}/public/data/quizzes/${quizId}`;
-            await deleteDoc(doc(db, publicQuizDocPath));
-            
+            const success = deleteQuiz(userId, quizId);
+            if (success) {
+                // Reload the quizzes after deletion
+                if (loadSavedQuizzes) {
+                    loadSavedQuizzes(userId);
+                }
+                console.log("Quiz deleted successfully");
+            } else {
+                console.error("Failed to delete quiz");
+            }
         } catch (error) {
             console.error("Error deleting quiz:", error);
         }
@@ -37,6 +40,9 @@ export const HomeView = ({ setView, myQuizzes, setCreatedQuizCode, userId }) => 
                 </button>
                 <button onClick={() => setView('attempt')} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 px-8 rounded-lg text-xl shadow-lg shadow-gray-700/20 transition-transform transform hover:scale-105 flex items-center justify-center gap-3">
                     <Play size={24} /> Attempt a Quiz
+                </button>
+                <button onClick={() => setView('library')} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-8 rounded-lg text-xl shadow-lg shadow-purple-600/20 transition-transform transform hover:scale-105 flex items-center justify-center gap-3">
+                    <Library size={24} /> Quiz Library
                 </button>
             </div>
             <div className="mt-16">
